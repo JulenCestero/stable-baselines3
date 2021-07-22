@@ -199,6 +199,7 @@ class DQN(OffPolicyAlgorithm):
         state: Optional[np.ndarray] = None,
         mask: Optional[np.ndarray] = None,
         deterministic: bool = False,
+        action_mask: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Overrides the base_class predict function to include epsilon-greedy exploration.
@@ -216,9 +217,25 @@ class DQN(OffPolicyAlgorithm):
                     n_batch = observation[list(observation.keys())[0]].shape[0]
                 else:
                     n_batch = observation.shape[0]
-                action = np.array([self.action_space.sample() for _ in range(n_batch)])
+                if action_mask is None:
+                    action = np.array([self.action_space.sample() for _ in range(n_batch)])
+                else:
+                    try:
+                        assert type(self.action_space) is gym.spaces.discrete.Discrete
+                    except AssertionError:
+                        raise NotImplementedError
+                    available_actions = np.array(range(self.action_space.n))[action_mask == 1]
+                    action = np.array([np.random.choice(available_actions) for _ in range(n_batch)])
             else:
-                action = np.array(self.action_space.sample())
+                if action_mask is None:
+                    action = np.array(self.action_space.sample())
+                else:
+                    try:
+                        assert type(self.action_space) is gym.spaces.discrete.Discrete
+                    except AssertionError:
+                        raise NotImplementedError
+                    available_actions = np.array(range(self.action_space.n))[action_mask == 1]
+                    action = np.array([np.random.choice(available_actions)])
         else:
             action, state = self.policy.predict(observation, state, mask, deterministic)
         return action, state

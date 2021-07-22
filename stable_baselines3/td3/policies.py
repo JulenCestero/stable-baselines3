@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Type, Union
 
 import gym
+import numpy as np
 import torch as th
 from torch import nn
 
@@ -77,7 +78,9 @@ class Actor(BasePolicy):
         features = self.extract_features(obs)
         return self.mu(features)
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         # Note: the deterministic deterministic parameter is ignored in the case of TD3.
         #   Predictions are always deterministic.
         return self.forward(observation)
@@ -220,7 +223,9 @@ class TD3Policy(BasePolicy):
     def forward(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
         return self._predict(observation, deterministic=deterministic)
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         # Note: the deterministic deterministic parameter is ignored in the case of TD3.
         #   Predictions are always deterministic.
         return self.actor(observation)

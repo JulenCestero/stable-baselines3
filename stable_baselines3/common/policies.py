@@ -232,7 +232,9 @@ class BasePolicy(BaseModel):
                 module.bias.data.fill_(0.0)
 
     @abstractmethod
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         """
         Get the action according to the policy for a given observation.
 
@@ -250,6 +252,7 @@ class BasePolicy(BaseModel):
         state: Optional[np.ndarray] = None,
         mask: Optional[np.ndarray] = None,
         deterministic: bool = False,
+        action_mask: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Get the policy action and state from an observation (and optional state).
@@ -299,7 +302,20 @@ class BasePolicy(BaseModel):
         observation = obs_as_tensor(observation, self.device)
 
         with th.no_grad():
-            actions = self._predict(observation, deterministic=deterministic)
+            try:
+                actions = self._predict(observation, deterministic=deterministic, action_mask=action_mask)
+            except TypeError as e:
+                import inspect
+                import sys
+                import traceback
+
+                traceback.print_exc(file=sys.stdout)
+                print(e)
+                print(inspect.getsource(self._predict))
+                import pdb
+
+                pdb.set_trace()
+                raise TypeError
         # Convert to numpy
         actions = actions.cpu().numpy()
 
@@ -613,7 +629,9 @@ class ActorCriticPolicy(BasePolicy):
         else:
             raise ValueError("Invalid action distribution")
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         """
         Get the action according to the policy for a given observation.
 

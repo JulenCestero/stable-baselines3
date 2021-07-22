@@ -380,7 +380,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         raise NotImplementedError()
 
     def _sample_action(
-        self, learning_starts: int, action_noise: Optional[ActionNoise] = None
+        self, learning_starts: int, action_noise: Optional[ActionNoise] = None, action_mask: Optional[np.ndarray] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Sample an action according to the exploration policy.
@@ -399,12 +399,20 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         # Select action randomly or according to policy
         if self.num_timesteps < learning_starts and not (self.use_sde and self.use_sde_at_warmup):
             # Warmup phase
-            unscaled_action = np.array([self.action_space.sample()])
+            if action_mask is None:
+                unscaled_action = np.array([self.action_space.sample()])
+            else:
+                try:
+                    assert type(self.action_space) is gym.spaces.discrete.Discrete
+                except AssertionError:
+                    raise NotImplementedError
+                available_actions = np.array(range(self.action_space.n))[action_mask == 1]
+                unscaled_action = np.array([np.random.choice(available_actions)])
         else:
             # Note: when using continuous actions,
             # we assume that the policy uses tanh to scale the action
             # We use non-deterministic action in the case of SAC, for TD3, it does not matter
-            unscaled_action, _ = self.predict(self._last_obs, deterministic=False)
+            unscaled_action, _ = self.predict(self._last_obs, deterministic=False, action_mask=action_mask)
 
         # Rescale the action from [low, high] to [-1, 1]
         if isinstance(self.action_space, gym.spaces.Box):
@@ -516,6 +524,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         action_noise: Optional[ActionNoise] = None,
         learning_starts: int = 0,
         log_interval: Optional[int] = None,
+        available_action_mask: Optional[bool] = False,
     ) -> RolloutReturn:
         """
         Collect experiences and store them into a ``ReplayBuffer``.
@@ -559,8 +568,13 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                     # Sample a new noise matrix
                     self.actor.reset_noise()
 
+                if available_action_mask:
+                    action_mask = env.action_mask
+                else:
+                    action_mask = None
+
                 # Select action randomly or according to policy
-                action, buffer_action = self._sample_action(learning_starts, action_noise)
+                action, buffer_action = self._sample_action(learning_starts, action_noise, action_mask)
 
                 # Rescale and perform action
                 new_obs, reward, done, infos = env.step(action)

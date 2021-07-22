@@ -525,6 +525,7 @@ class BaseAlgorithm(ABC):
         state: Optional[np.ndarray] = None,
         mask: Optional[np.ndarray] = None,
         deterministic: bool = False,
+        action_mask: Optional[np.ndarray] = None,
     ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """
         Get the model's action(s) from an observation
@@ -536,7 +537,7 @@ class BaseAlgorithm(ABC):
         :return: the model's action and the next state
             (used in recurrent policies)
         """
-        return self.policy.predict(observation, state, mask, deterministic)
+        return self.policy.predict(observation, state, mask, deterministic, action_mask)
 
     def set_random_seed(self, seed: Optional[int] = None) -> None:
         """

@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Type
 
 import gym
+import numpy as np
 import torch as th
 from torch import nn
 
@@ -65,10 +66,17 @@ class QNetwork(BasePolicy):
         """
         return self.q_net(self.extract_features(obs))
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = True) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = True, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         q_values = self.forward(observation)
         # Greedy action
-        action = q_values.argmax(dim=1).reshape(-1)
+        if action_mask is None:
+            action = q_values.argmax(dim=1).reshape(-1)
+        else:
+            masked_q_values = q_values.numpy().reshape(-1) * action_mask
+            np.putmask(masked_q_values, masked_q_values == 0, np.NINF)
+            action = th.tensor(masked_q_values.argmax().reshape(-1))
         return action
 
     def _get_constructor_parameters(self) -> Dict[str, Any]:
@@ -171,8 +179,8 @@ class DQNPolicy(BasePolicy):
     def forward(self, obs: th.Tensor, deterministic: bool = True) -> th.Tensor:
         return self._predict(obs, deterministic=deterministic)
 
-    def _predict(self, obs: th.Tensor, deterministic: bool = True) -> th.Tensor:
-        return self.q_net._predict(obs, deterministic=deterministic)
+    def _predict(self, obs: th.Tensor, deterministic: bool = True, action_mask: Optional[np.ndarray] = None) -> th.Tensor:
+        return self.q_net._predict(obs, deterministic=deterministic, action_mask=action_mask)
 
     def _get_constructor_parameters(self) -> Dict[str, Any]:
         data = super()._get_constructor_parameters()

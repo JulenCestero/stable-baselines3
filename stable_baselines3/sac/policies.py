@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import gym
+import numpy as np
 import torch as th
 from torch import nn
 
@@ -189,7 +190,9 @@ class Actor(BasePolicy):
         # return action and associated log prob
         return self.action_dist.log_prob_from_params(mean_actions, log_std, **kwargs)
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         return self.forward(observation, deterministic)
 
 
@@ -358,7 +361,9 @@ class SACPolicy(BasePolicy):
     def forward(self, obs: th.Tensor, deterministic: bool = False) -> th.Tensor:
         return self._predict(obs, deterministic=deterministic)
 
-    def _predict(self, observation: th.Tensor, deterministic: bool = False) -> th.Tensor:
+    def _predict(
+        self, observation: th.Tensor, deterministic: bool = False, action_mask: Optional[np.ndarray] = None
+    ) -> th.Tensor:
         return self.actor(observation, deterministic)
 
 

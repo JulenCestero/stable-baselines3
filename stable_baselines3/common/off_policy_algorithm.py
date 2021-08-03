@@ -333,6 +333,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         tb_log_name: str = "run",
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
+        available_action_mask: Optional[bool] = False,
     ) -> "OffPolicyAlgorithm":
 
         total_timesteps, callback = self._setup_learn(
@@ -357,6 +358,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                 learning_starts=self.learning_starts,
                 replay_buffer=self.replay_buffer,
                 log_interval=log_interval,
+                available_action_mask=available_action_mask,
             )
 
             if rollout.continue_training is False:
@@ -569,7 +571,7 @@ class OffPolicyAlgorithm(BaseAlgorithm):
                     self.actor.reset_noise()
 
                 if available_action_mask:
-                    action_mask = env.action_mask
+                    action_mask = env.get_attr("action_mask")[0]
                 else:
                     action_mask = None
 

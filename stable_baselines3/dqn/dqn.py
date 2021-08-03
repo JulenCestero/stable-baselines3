@@ -237,7 +237,7 @@ class DQN(OffPolicyAlgorithm):
                     available_actions = np.array(range(self.action_space.n))[action_mask == 1]
                     action = np.array([np.random.choice(available_actions)])
         else:
-            action, state = self.policy.predict(observation, state, mask, deterministic)
+            action, state = self.policy.predict(observation, state, mask, deterministic, action_mask)
         return action, state
 
     def learn(
@@ -251,6 +251,7 @@ class DQN(OffPolicyAlgorithm):
         tb_log_name: str = "DQN",
         eval_log_path: Optional[str] = None,
         reset_num_timesteps: bool = True,
+        available_action_mask: Optional[bool] = False,
     ) -> OffPolicyAlgorithm:
 
         return super(DQN, self).learn(
@@ -263,6 +264,7 @@ class DQN(OffPolicyAlgorithm):
             tb_log_name=tb_log_name,
             eval_log_path=eval_log_path,
             reset_num_timesteps=reset_num_timesteps,
+            available_action_mask=available_action_mask,
         )
 
     def _excluded_save_params(self) -> List[str]:

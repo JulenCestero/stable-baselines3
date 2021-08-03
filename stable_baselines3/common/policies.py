@@ -302,20 +302,8 @@ class BasePolicy(BaseModel):
         observation = obs_as_tensor(observation, self.device)
 
         with th.no_grad():
-            try:
-                actions = self._predict(observation, deterministic=deterministic, action_mask=action_mask)
-            except TypeError as e:
-                import inspect
-                import sys
-                import traceback
+            actions = self._predict(observation, deterministic=deterministic, action_mask=action_mask)
 
-                traceback.print_exc(file=sys.stdout)
-                print(e)
-                print(inspect.getsource(self._predict))
-                import pdb
-
-                pdb.set_trace()
-                raise TypeError
         # Convert to numpy
         actions = actions.cpu().numpy()
 

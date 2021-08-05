@@ -84,6 +84,7 @@ class DQN(OffPolicyAlgorithm):
         verbose: int = 0,
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
+        double_dqn: bool = False,
         _init_setup_model: bool = True,
     ):
 
@@ -118,6 +119,7 @@ class DQN(OffPolicyAlgorithm):
         self.exploration_fraction = exploration_fraction
         self.target_update_interval = target_update_interval
         self.max_grad_norm = max_grad_norm
+        self.double_dqn = double_dqn
         # "epsilon" for the epsilon-greedy exploration
         self.exploration_rate = 0.0
         # Linear schedule will be defined in `_setup_model()`
@@ -163,8 +165,14 @@ class DQN(OffPolicyAlgorithm):
             with th.no_grad():
                 # Compute the next Q-values using the target network
                 next_q_values = self.q_net_target(replay_data.next_observations)
-                # Follow greedy policy: use the one with the highest value
-                next_q_values, _ = next_q_values.max(dim=1)
+                if self.double_dqn:
+                    # use current model to select the action with maximal q value
+                    max_actions = th.argmax(self.q_net(replay_data.next_observations), dim=1)
+                    # evaluate q value of that action using fixed target network
+                    next_q_values = th.gather(next_q_values, dim=1, index=max_actions.unsqueeze(-1))
+                else:
+                    # Follow greedy policy: use the one with the highest value
+                    next_q_values, _ = next_q_values.max(dim=1)
                 # Avoid potential broadcast issue
                 next_q_values = next_q_values.reshape(-1, 1)
                 # 1-step TD target

@@ -142,7 +142,9 @@ def test_kl_divergence(dist_type):
         dist1 = dist_type.proba_distribution(th.rand(N_ACTIONS).repeat(N_SAMPLES, 1))
         # deepcopy needed to assign new memory to new distribution instance
         dist2 = deepcopy(dist_type).proba_distribution(th.rand(N_ACTIONS).repeat(N_SAMPLES, 1))
-    elif isinstance(dist_type, DiagGaussianDistribution) or isinstance(dist_type, SquashedDiagGaussianDistribution):
+    elif isinstance(
+        dist_type, (DiagGaussianDistribution, SquashedDiagGaussianDistribution)
+    ):
         mean_actions1 = th.rand(1).repeat(N_SAMPLES, 1)
         log_std1 = th.rand(1).repeat(N_SAMPLES, 1)
         mean_actions2 = th.rand(1).repeat(N_SAMPLES, 1)

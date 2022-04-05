@@ -25,13 +25,13 @@ def test_tensorboard(tmp_path, model_name):
     model.learn(N_STEPS)
     model.learn(N_STEPS, reset_num_timesteps=False)
 
-    assert os.path.isdir(tmp_path / str(logname + "_1"))
-    assert not os.path.isdir(tmp_path / str(logname + "_2"))
+    assert os.path.isdir(tmp_path / str(f'{logname}_1'))
+    assert not os.path.isdir(tmp_path / str(f'{logname}_2'))
 
-    logname = "tb_multiple_runs_" + model_name
+    logname = f"tb_multiple_runs_{model_name}"
     model.learn(N_STEPS, tb_log_name=logname)
     model.learn(N_STEPS, tb_log_name=logname)
 
-    assert os.path.isdir(tmp_path / str(logname + "_1"))
+    assert os.path.isdir(tmp_path / str(f'{logname}_1'))
     # Check that the log dir name increments correctly
-    assert os.path.isdir(tmp_path / str(logname + "_2"))
+    assert os.path.isdir(tmp_path / str(f'{logname}_2'))

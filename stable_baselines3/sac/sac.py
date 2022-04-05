@@ -239,7 +239,11 @@ class SAC(OffPolicyAlgorithm):
             current_q_values = self.critic(replay_data.observations, replay_data.actions)
 
             # Compute critic loss
-            critic_loss = 0.5 * sum([F.mse_loss(current_q, target_q_values) for current_q in current_q_values])
+            critic_loss = 0.5 * sum(
+                F.mse_loss(current_q, target_q_values)
+                for current_q in current_q_values
+            )
+
             critic_losses.append(critic_loss.item())
 
             # Optimize the critic
@@ -270,7 +274,7 @@ class SAC(OffPolicyAlgorithm):
         self.logger.record("train/ent_coef", np.mean(ent_coefs))
         self.logger.record("train/actor_loss", np.mean(actor_losses))
         self.logger.record("train/critic_loss", np.mean(critic_losses))
-        if len(ent_coef_losses) > 0:
+        if ent_coef_losses:
             self.logger.record("train/ent_coef_loss", np.mean(ent_coef_losses))
 
     def learn(

@@ -20,10 +20,7 @@ def test_auto_wrap(model_class):
     # test auto wrapping of env into a VecEnv
 
     # Use different environment for DQN
-    if model_class is DQN:
-        env_name = "CartPole-v0"
-    else:
-        env_name = "Pendulum-v0"
+    env_name = "CartPole-v0" if model_class is DQN else "Pendulum-v0"
     env = gym.make(env_name)
     eval_env = gym.make(env_name)
     model = model_class("MlpPolicy", env)
@@ -37,12 +34,13 @@ def test_predict(model_class, env_id, device):
     if device == "cuda" and not th.cuda.is_available():
         pytest.skip("CUDA not available")
 
-    if env_id == "CartPole-v1":
-        if model_class in [SAC, TD3]:
-            return
-    elif model_class in [DQN]:
+    if (
+        env_id == "CartPole-v1"
+        and model_class in [SAC, TD3]
+        or env_id != "CartPole-v1"
+        and model_class in [DQN]
+    ):
         return
-
     # Test detection of different shapes by the predict method
     model = model_class("MlpPolicy", env_id, device=device)
     # Check that the policy is on the right device

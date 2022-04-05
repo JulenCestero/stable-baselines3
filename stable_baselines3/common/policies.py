@@ -105,11 +105,14 @@ class BaseModel(nn.Module, ABC):
             If None, a new object will be created.
         :return: The updated keyword arguments
         """
-        net_kwargs = net_kwargs.copy()
         if features_extractor is None:
             # The features extractor is not shared, create a new one
             features_extractor = self.make_features_extractor()
-        net_kwargs.update(dict(features_extractor=features_extractor, features_dim=features_extractor.features_dim))
+        net_kwargs |= dict(
+            features_extractor=features_extractor,
+            features_dim=features_extractor.features_dim,
+        )
+
         return net_kwargs
 
     def make_features_extractor(self) -> BaseFeaturesExtractor:
@@ -882,14 +885,14 @@ def create_sde_features_extractor(
     """
     # Special case: when using states as features (i.e. sde_net_arch is an empty list)
     # don't use any activation function
-    sde_activation = activation_fn if len(sde_net_arch) > 0 else None
+    sde_activation = activation_fn if sde_net_arch else None
     latent_sde_net = create_mlp(features_dim, -1, sde_net_arch, activation_fn=sde_activation, squash_output=False)
-    latent_sde_dim = sde_net_arch[-1] if len(sde_net_arch) > 0 else features_dim
+    latent_sde_dim = sde_net_arch[-1] if sde_net_arch else features_dim
     sde_features_extractor = nn.Sequential(*latent_sde_net)
     return sde_features_extractor, latent_sde_dim
 
 
-_policy_registry = dict()  # type: Dict[Type[BasePolicy], Dict[str, Type[BasePolicy]]]
+_policy_registry = {}
 
 
 def get_policy_from_name(base_policy_type: Type[BasePolicy], name: str) -> Type[BasePolicy]:
@@ -935,20 +938,23 @@ def register_policy(name: str, policy: Type[BasePolicy]) -> None:
     :param name: the policy name
     :param policy: the policy class
     """
-    sub_class = None
-    for cls in BasePolicy.__subclasses__():
-        if issubclass(policy, cls):
-            sub_class = cls
-            break
+    sub_class = next(
+        (
+            cls
+            for cls in BasePolicy.__subclasses__()
+            if issubclass(policy, cls)
+        ),
+        None,
+    )
+
     if sub_class is None:
         raise ValueError(f"Error: the policy {policy} is not of any known subclasses of BasePolicy!")
 
     if sub_class not in _policy_registry:
         _policy_registry[sub_class] = {}
-    if name in _policy_registry[sub_class]:
-        # Check if the registered policy is same
-        # we try to register. If not so,
-        # do not override and complain.
-        if _policy_registry[sub_class][name] != policy:
-            raise ValueError(f"Error: the name {name} is already registered for a different policy, will not override.")
+    if (
+        name in _policy_registry[sub_class]
+        and _policy_registry[sub_class][name] != policy
+    ):
+        raise ValueError(f"Error: the name {name} is already registered for a different policy, will not override.")
     _policy_registry[sub_class][name] = policy

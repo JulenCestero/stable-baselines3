@@ -146,12 +146,7 @@ class A2C(OnPolicyAlgorithm):
             value_loss = F.mse_loss(rollout_data.returns, values)
 
             # Entropy loss favor exploration
-            if entropy is None:
-                # Approximate entropy when no analytical form
-                entropy_loss = -th.mean(-log_prob)
-            else:
-                entropy_loss = -th.mean(entropy)
-
+            entropy_loss = -th.mean(-log_prob) if entropy is None else -th.mean(entropy)
             loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
             # Optimization step

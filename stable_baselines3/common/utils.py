@@ -189,16 +189,13 @@ def configure_logger(
     if tensorboard_log is not None and SummaryWriter is None:
         raise ImportError("Trying to log data to tensorboard but tensorboard is not installed.")
 
-    if tensorboard_log is not None and SummaryWriter is not None:
+    if tensorboard_log is not None:
         latest_run_id = get_latest_run_id(tensorboard_log, tb_log_name)
         if not reset_num_timesteps:
             # Continue training in the same directory
             latest_run_id -= 1
         save_path = os.path.join(tensorboard_log, f"{tb_log_name}_{latest_run_id + 1}")
-        if verbose >= 1:
-            format_strings = ["stdout", "tensorboard"]
-        else:
-            format_strings = ["tensorboard"]
+        format_strings = ["stdout", "tensorboard"] if verbose >= 1 else ["tensorboard"]
     elif verbose == 0:
         format_strings = [""]
     return configure(save_path, format_strings=format_strings)
@@ -237,9 +234,11 @@ def is_vectorized_box_observation(observation: np.ndarray, observation_space: gy
         return True
     else:
         raise ValueError(
-            f"Error: Unexpected observation shape {observation.shape} for "
-            + f"Box environment, please use {observation_space.shape} "
-            + "or (n_env, {}) for the observation shape.".format(", ".join(map(str, observation_space.shape)))
+            (
+                f"Error: Unexpected observation shape {observation.shape} for "
+                + f"Box environment, please use {observation_space.shape} "
+                + f'or (n_env, {", ".join(map(str, observation_space.shape))}) for the observation shape.'
+            )
         )
 
 
@@ -318,12 +317,10 @@ def is_vectorized_dict_observation(observation: np.ndarray, observation_space: g
         if observation[key].shape == subspace.shape:
             return False
 
-    all_good = True
-
-    for key, subspace in observation_space.spaces.items():
-        if observation[key].shape[1:] != subspace.shape:
-            all_good = False
-            break
+    all_good = all(
+        observation[key].shape[1:] == subspace.shape
+        for key, subspace in observation_space.spaces.items()
+    )
 
     if all_good:
         return True

@@ -133,11 +133,7 @@ class TD3Policy(BasePolicy):
 
         # Default network architecture, from the original paper
         if net_arch is None:
-            if features_extractor_class == NatureCNN:
-                net_arch = []
-            else:
-                net_arch = [400, 300]
-
+            net_arch = [] if features_extractor_class == NatureCNN else [400, 300]
         actor_arch, critic_arch = get_actor_critic_arch(net_arch)
 
         self.net_arch = net_arch
@@ -150,14 +146,11 @@ class TD3Policy(BasePolicy):
             "normalize_images": normalize_images,
         }
         self.actor_kwargs = self.net_args.copy()
-        self.critic_kwargs = self.net_args.copy()
-        self.critic_kwargs.update(
-            {
-                "n_critics": n_critics,
-                "net_arch": critic_arch,
-                "share_features_extractor": share_features_extractor,
-            }
-        )
+        self.critic_kwargs = self.net_args.copy() | {
+            "n_critics": n_critics,
+            "net_arch": critic_arch,
+            "share_features_extractor": share_features_extractor,
+        }
 
         self.actor, self.actor_target = None, None
         self.critic, self.critic_target = None, None

@@ -52,7 +52,10 @@ def test_vec_monitor_load_results(tmp_path):
     tmp_path = str(tmp_path)
     env1 = DummyVecEnv([lambda: gym.make("CartPole-v1")])
     env1.seed(0)
-    monitor_file1 = os.path.join(str(tmp_path), f"stable_baselines-test-{uuid.uuid4()}.monitor.csv")
+    monitor_file1 = os.path.join(
+        tmp_path, f"stable_baselines-test-{uuid.uuid4()}.monitor.csv"
+    )
+
     monitor_env1 = VecMonitor(env1, monitor_file1)
 
     monitor_files = get_monitor_files(tmp_path)
@@ -72,7 +75,10 @@ def test_vec_monitor_load_results(tmp_path):
 
     env2 = DummyVecEnv([lambda: gym.make("CartPole-v1")])
     env2.seed(0)
-    monitor_file2 = os.path.join(str(tmp_path), f"stable_baselines-test-{uuid.uuid4()}.monitor.csv")
+    monitor_file2 = os.path.join(
+        tmp_path, f"stable_baselines-test-{uuid.uuid4()}.monitor.csv"
+    )
+
     monitor_env2 = VecMonitor(env2, monitor_file2)
     monitor_files = get_monitor_files(tmp_path)
     assert len(monitor_files) == 2

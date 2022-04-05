@@ -56,8 +56,7 @@ class VecCheckNan(VecEnvWrapper):
         found = []
         for name, val in kwargs.items():
             has_nan = np.any(np.isnan(val))
-            has_inf = self.check_inf and np.any(np.isinf(val))
-            if has_inf:
+            if has_inf := self.check_inf and np.any(np.isinf(val)):
                 found.append((name, "inf"))
             if has_nan:
                 found.append((name, "nan"))
@@ -72,14 +71,13 @@ class VecCheckNan(VecEnvWrapper):
 
             msg += ".\r\nOriginated from the "
 
-            if not async_step:
-                if self._actions is None:
-                    msg += "environment observation (at reset)"
-                else:
-                    msg += f"environment, Last given value was: \r\n\taction={self._actions}"
-            else:
+            if async_step:
                 msg += f"RL model, Last given value was: \r\n\tobservations={self._observations}"
 
+            elif self._actions is None:
+                msg += "environment observation (at reset)"
+            else:
+                msg += f"environment, Last given value was: \r\n\taction={self._actions}"
             if self.raise_exception:
                 raise ValueError(msg)
             else:

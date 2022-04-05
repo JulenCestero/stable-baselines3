@@ -150,8 +150,7 @@ class SubprocVecEnv(VecEnv):
             # gather images from subprocesses
             # `mode` will be taken into account later
             pipe.send(("render", "rgb_array"))
-        imgs = [pipe.recv() for pipe in self.remotes]
-        return imgs
+        return [pipe.recv() for pipe in self.remotes]
 
     def get_attr(self, attr_name: str, indices: VecEnvIndices = None) -> List[Any]:
         """Return attribute from vectorized environment (see base class)."""

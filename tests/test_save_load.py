@@ -24,10 +24,7 @@ def select_env(model_class: BaseAlgorithm) -> gym.Env:
     """
     Selects an environment with the correct action space as DQN only supports discrete action space
     """
-    if model_class == DQN:
-        return IdentityEnv(10)
-    else:
-        return IdentityEnvBox(10)
+    return IdentityEnv(10) if model_class == DQN else IdentityEnvBox(10)
 
 
 @pytest.mark.parametrize("model_class", MODEL_LIST)
@@ -64,7 +61,7 @@ def test_save_load(tmp_path, model_class):
         model.set_parameters(invalid_object_params, exact_match=False)
 
     # Test that exact_match catches when something was missed.
-    missing_object_params = dict((k, v) for k, v in list(original_params.items())[:-1])
+    missing_object_params = dict(list(original_params.items())[:-1])
     with pytest.raises(ValueError):
         model.set_parameters(missing_object_params, exact_match=True)
 
@@ -281,7 +278,7 @@ def test_save_load_env_cnn(tmp_path, model_class):
     env = FakeImageEnv(screen_height=40, screen_width=40, n_channels=2, discrete=False)
     kwargs = dict(policy_kwargs=dict(net_arch=[32]))
     if model_class == TD3:
-        kwargs.update(dict(buffer_size=100, learning_starts=50, train_freq=4))
+        kwargs |= dict(buffer_size=100, learning_starts=50, train_freq=4)
 
     model = model_class("CnnPolicy", env, **kwargs).learn(100)
     model.save(tmp_path / "test_save")
@@ -411,7 +408,10 @@ def test_save_load_policy(tmp_path, model_class, policy_str, use_sde):
     params = deepcopy(policy.state_dict())
 
     # Modify all parameters to be random values
-    random_params = dict((param_name, th.rand_like(param)) for param_name, param in params.items())
+    random_params = {
+        param_name: th.rand_like(param) for param_name, param in params.items()
+    }
+
 
     # Update model parameters with the new random values
     policy.load_state_dict(random_params)
@@ -502,7 +502,10 @@ def test_save_load_q_net(tmp_path, model_class, policy_str):
     params = deepcopy(q_net.state_dict())
 
     # Modify all parameters to be random values
-    random_params = dict((param_name, th.rand_like(param)) for param_name, param in params.items())
+    random_params = {
+        param_name: th.rand_like(param) for param_name, param in params.items()
+    }
+
 
     # Update model parameters with the new random values
     q_net.load_state_dict(random_params)
@@ -615,7 +618,7 @@ def test_open_file(tmp_path):
 
     buff = io.BytesIO()
     assert buff.writable()
-    assert buff.readable() is ("w" == "w")
+    assert buff.readable() is True
     _ = open_path(buff, "w")
     assert _ is buff
     with pytest.raises(ValueError):

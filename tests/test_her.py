@@ -36,9 +36,10 @@ def test_her(model_class, online_sampling, image_obs_space):
     n_bits = 4
     env = BitFlippingEnv(
         n_bits=n_bits,
-        continuous=not (model_class == DQN),
+        continuous=model_class != DQN,
         image_obs_space=image_obs_space,
     )
+
 
     model = model_class(
         "MultiInputPolicy",
@@ -113,7 +114,7 @@ def test_save_load(tmp_path, model_class, use_sde, online_sampling):
         pytest.skip("Only SAC has gSDE support")
 
     n_bits = 4
-    env = BitFlippingEnv(n_bits=n_bits, continuous=not (model_class == DQN))
+    env = BitFlippingEnv(n_bits=n_bits, continuous=model_class != DQN)
 
     kwargs = dict(use_sde=True) if use_sde else {}
 
@@ -156,7 +157,10 @@ def test_save_load(tmp_path, model_class, use_sde, online_sampling):
     params = deepcopy(model.policy.state_dict())
 
     # Modify all parameters to be random values
-    random_params = dict((param_name, th.rand_like(param)) for param_name, param in params.items())
+    random_params = {
+        param_name: th.rand_like(param) for param_name, param in params.items()
+    }
+
 
     # Update model parameters with the new random values
     model.policy.load_state_dict(random_params)
@@ -294,7 +298,7 @@ def test_save_load_replay_buffer(tmp_path, recwarn, online_sampling, truncate_la
         assert np.allclose(old_replay_buffer.dones, replay_buffer.dones)
 
     # test if continuing training works properly
-    reset_num_timesteps = False if truncate_last_trajectory is False else True
+    reset_num_timesteps = truncate_last_trajectory is not False
     model.learn(200, reset_num_timesteps=reset_num_timesteps)
 
 

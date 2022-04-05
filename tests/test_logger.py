@@ -35,9 +35,7 @@ KEY_VALUES = {
     "h": 'this ", ;is a \n tes:,t',
 }
 
-KEY_EXCLUDED = {}
-for key in KEY_VALUES.keys():
-    KEY_EXCLUDED[key] = None
+KEY_EXCLUDED = {key: None for key in KEY_VALUES}
 
 
 class LogContent:
@@ -85,11 +83,11 @@ def read_log(tmp_path, capsys):
 
             tb_values_logged = []
             for reservoir in [acc.scalars, acc.tensors, acc.images, acc.histograms, acc.compressed_histograms]:
-                for k in reservoir.Keys():
-                    tb_values_logged.append(f"{k}: {str(reservoir.Items(k))}")
+                tb_values_logged.extend(
+                    f"{k}: {str(reservoir.Items(k))}" for k in reservoir.Keys()
+                )
 
-            content = LogContent(_format, tb_values_logged)
-            return content
+            return LogContent(_format, tb_values_logged)
 
     return read_fn
 

@@ -205,10 +205,7 @@ class VecEnv(ABC):
 
     @property
     def unwrapped(self) -> "VecEnv":
-        if isinstance(self, VecEnvWrapper):
-            return self.venv.unwrapped
-        else:
-            return self
+        return self.venv.unwrapped if isinstance(self, VecEnvWrapper) else self
 
     def getattr_depth_check(self, name: str, already_found: bool) -> Optional[str]:
         """Check if an attribute reference is being hidden in a recursive call to __getattr__
@@ -328,15 +325,13 @@ class VecEnvWrapper(VecEnv):
         """
         all_attributes = self._get_all_attributes()
         if name in all_attributes:  # attribute is present in this wrapper
-            attr = getattr(self, name)
+            return getattr(self, name)
         elif hasattr(self.venv, "getattr_recursive"):
             # Attribute not present, child is wrapper. Call getattr_recursive rather than getattr
             # to avoid a duplicate call to getattr_depth_check.
-            attr = self.venv.getattr_recursive(name)
+            return self.venv.getattr_recursive(name)
         else:  # attribute not present, child is an unwrapped VecEnv
-            attr = getattr(self.venv, name)
-
-        return attr
+            return getattr(self.venv, name)
 
     def getattr_depth_check(self, name: str, already_found: bool) -> str:
         """See base class.
@@ -346,15 +341,13 @@ class VecEnvWrapper(VecEnv):
         all_attributes = self._get_all_attributes()
         if name in all_attributes and already_found:
             # this venv's attribute is being hidden because of a higher venv.
-            shadowed_wrapper_class = f"{type(self).__module__}.{type(self).__name__}"
-        elif name in all_attributes and not already_found:
+            return f"{type(self).__module__}.{type(self).__name__}"
+        elif name in all_attributes:
             # we have found the first reference to the attribute. Now check for duplicates.
-            shadowed_wrapper_class = self.venv.getattr_depth_check(name, True)
+            return self.venv.getattr_depth_check(name, True)
         else:
             # this wrapper does not have the attribute. Keep searching.
-            shadowed_wrapper_class = self.venv.getattr_depth_check(name, already_found)
-
-        return shadowed_wrapper_class
+            return self.venv.getattr_depth_check(name, already_found)
 
 
 class CloudpickleWrapper:

@@ -157,22 +157,23 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         Convert `train_freq` parameter (int or tuple)
         to a TrainFreq object.
         """
-        if not isinstance(self.train_freq, TrainFreq):
-            train_freq = self.train_freq
+        if isinstance(self.train_freq, TrainFreq):
+            return
+        train_freq = self.train_freq
 
-            # The value of the train frequency will be checked later
-            if not isinstance(train_freq, tuple):
-                train_freq = (train_freq, "step")
+        # The value of the train frequency will be checked later
+        if not isinstance(train_freq, tuple):
+            train_freq = (train_freq, "step")
 
-            try:
-                train_freq = (train_freq[0], TrainFrequencyUnit(train_freq[1]))
-            except ValueError:
-                raise ValueError(f"The unit of the `train_freq` must be either 'step' or 'episode' not '{train_freq[1]}'!")
+        try:
+            train_freq = (train_freq[0], TrainFrequencyUnit(train_freq[1]))
+        except ValueError:
+            raise ValueError(f"The unit of the `train_freq` must be either 'step' or 'episode' not '{train_freq[1]}'!")
 
-            if not isinstance(train_freq[0], int):
-                raise ValueError(f"The frequency of `train_freq` must be an integer and not {train_freq[0]}")
+        if not isinstance(train_freq[0], int):
+            raise ValueError(f"The frequency of `train_freq` must be an integer and not {train_freq[0]}")
 
-            self.train_freq = TrainFreq(*train_freq)
+        self.train_freq = TrainFreq(*train_freq)
 
     def _setup_model(self) -> None:
         self._setup_lr_schedule()
@@ -293,14 +294,12 @@ class OffPolicyAlgorithm(BaseAlgorithm):
         else:
             replay_buffer = self.replay_buffer
 
-        truncate_last_traj = (
+        if truncate_last_traj := (
             self.optimize_memory_usage
             and reset_num_timesteps
             and replay_buffer is not None
             and (replay_buffer.full or replay_buffer.pos > 0)
-        )
-
-        if truncate_last_traj:
+        ):
             warnings.warn(
                 "The last trajectory in the replay buffer will be truncated, "
                 "see https://github.com/DLR-RM/stable-baselines3/issues/46."

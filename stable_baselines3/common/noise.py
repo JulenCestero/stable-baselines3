@@ -103,7 +103,7 @@ class VectorizedActionNoise(ActionNoise):
 
     def __init__(self, base_noise: ActionNoise, n_envs: int):
         try:
-            self.n_envs = int(n_envs)
+            self.n_envs = n_envs
             assert self.n_envs > 0
         except (TypeError, AssertionError):
             raise ValueError(f"Expected n_envs={n_envs} to be positive integer greater than 0")

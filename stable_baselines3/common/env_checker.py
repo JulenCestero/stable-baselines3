@@ -38,11 +38,7 @@ def _check_image_input(observation_space: spaces.Box, key: str = "") -> None:
             "you may encounter issue if the values are not in that range."
         )
 
-    non_channel_idx = 0
-    # Check only if width/height of the image is big enough
-    if is_image_space_channels_first(observation_space):
-        non_channel_idx = -1
-
+    non_channel_idx = -1 if is_image_space_channels_first(observation_space) else 0
     if observation_space.shape[non_channel_idx] < 36 or observation_space.shape[1] < 36:
         warnings.warn(
             "The minimal resolution for an image is 36x36 for the default `CnnPolicy`. "
@@ -55,10 +51,11 @@ def _check_unsupported_spaces(env: gym.Env, observation_space: spaces.Space, act
     """Emit warnings when the observation space or action space used is not supported by Stable-Baselines."""
 
     if isinstance(observation_space, spaces.Dict):
-        nested_dict = False
-        for space in observation_space.spaces.values():
-            if isinstance(space, spaces.Dict):
-                nested_dict = True
+        nested_dict = any(
+            isinstance(space, spaces.Dict)
+            for space in observation_space.spaces.values()
+        )
+
         if nested_dict:
             warnings.warn(
                 "Nested observation spaces are not supported by Stable Baselines3 "

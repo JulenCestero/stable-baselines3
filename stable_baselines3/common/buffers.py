@@ -73,9 +73,7 @@ class BaseBuffer(ABC):
         """
         :return: The current size of the buffer
         """
-        if self.full:
-            return self.buffer_size
-        return self.pos
+        return self.buffer_size if self.full else self.pos
 
     def add(self, *args, **kwargs) -> None:
         """
@@ -139,9 +137,7 @@ class BaseBuffer(ABC):
         obs: Union[np.ndarray, Dict[str, np.ndarray]],
         env: Optional[VecNormalize] = None,
     ) -> Union[np.ndarray, Dict[str, np.ndarray]]:
-        if env is not None:
-            return env.normalize_obs(obs)
-        return obs
+        return env.normalize_obs(obs) if env is not None else obs
 
     @staticmethod
     def _normalize_reward(reward: np.ndarray, env: Optional[VecNormalize] = None) -> np.ndarray:
@@ -498,7 +494,10 @@ class DictReplayBuffer(ReplayBuffer):
         if psutil is not None:
             mem_available = psutil.virtual_memory().available
 
-        assert optimize_memory_usage is False, "DictReplayBuffer does not support optimize_memory_usage"
+        assert (
+            not optimize_memory_usage
+        ), "DictReplayBuffer does not support optimize_memory_usage"
+
         # disabling as this adds quite a bit of complexity
         # https://github.com/DLR-RM/stable-baselines3/pull/243#discussion_r531535702
         self.optimize_memory_usage = optimize_memory_usage
@@ -523,15 +522,10 @@ class DictReplayBuffer(ReplayBuffer):
         self.timeouts = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
         if psutil is not None:
-            obs_nbytes = 0
-            for _, obs in self.observations.items():
-                obs_nbytes += obs.nbytes
-
+            obs_nbytes = sum(obs.nbytes for obs in self.observations.values())
             total_memory_usage = obs_nbytes + self.actions.nbytes + self.rewards.nbytes + self.dones.nbytes
             if self.next_observations is not None:
-                next_obs_nbytes = 0
-                for _, obs in self.observations.items():
-                    next_obs_nbytes += obs.nbytes
+                next_obs_nbytes = sum(obs.nbytes for obs in self.observations.values())
                 total_memory_usage += next_obs_nbytes
 
             if total_memory_usage > mem_available:

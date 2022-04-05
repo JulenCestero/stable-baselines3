@@ -324,13 +324,12 @@ class HerReplayBuffer(DictReplayBuffer):
                 # Episode of one timestep, not enough for using the "future" strategy
                 # no virtual transitions are created in that case
                 return {}, {}, np.zeros(0), np.zeros(0)
-            else:
-                # Repeat every transition index n_sampled_goals times
-                # to sample n_sampled_goal per timestep in the episode (only one is stored).
-                # Now with the corrected episode length when using "future" strategy
-                transitions_indices = np.tile(np.arange(ep_lengths[0]), n_sampled_goal)
-                episode_indices = episode_indices[transitions_indices]
-                her_indices = np.arange(len(episode_indices))
+            # Repeat every transition index n_sampled_goals times
+            # to sample n_sampled_goal per timestep in the episode (only one is stored).
+            # Now with the corrected episode length when using "future" strategy
+            transitions_indices = np.tile(np.arange(ep_lengths[0]), n_sampled_goal)
+            episode_indices = episode_indices[transitions_indices]
+            her_indices = np.arange(len(episode_indices))
 
         # get selected transitions
         transitions = {key: self._buffer[key][episode_indices, transitions_indices].copy() for key in self._buffer.keys()}
@@ -377,20 +376,19 @@ class HerReplayBuffer(DictReplayBuffer):
         }
         next_observations = self._normalize_obs(next_observations, maybe_vec_env)
 
-        if online_sampling:
-            next_obs = {key: self.to_torch(next_observations[key][:, 0, :]) for key in self._observation_keys}
-
-            normalized_obs = {key: self.to_torch(observations[key][:, 0, :]) for key in self._observation_keys}
-
-            return DictReplayBufferSamples(
-                observations=normalized_obs,
-                actions=self.to_torch(transitions["action"]),
-                next_observations=next_obs,
-                dones=self.to_torch(transitions["done"]),
-                rewards=self.to_torch(self._normalize_reward(transitions["reward"], maybe_vec_env)),
-            )
-        else:
+        if not online_sampling:
             return observations, next_observations, transitions["action"], transitions["reward"]
+        next_obs = {key: self.to_torch(next_observations[key][:, 0, :]) for key in self._observation_keys}
+
+        normalized_obs = {key: self.to_torch(observations[key][:, 0, :]) for key in self._observation_keys}
+
+        return DictReplayBufferSamples(
+            observations=normalized_obs,
+            actions=self.to_torch(transitions["action"]),
+            next_observations=next_obs,
+            dones=self.to_torch(transitions["done"]),
+            rewards=self.to_torch(self._normalize_reward(transitions["reward"], maybe_vec_env)),
+        )
 
     def add(
         self,
@@ -494,9 +492,7 @@ class HerReplayBuffer(DictReplayBuffer):
 
     @property
     def n_episodes_stored(self) -> int:
-        if self.full:
-            return self.max_episode_stored
-        return self.pos
+        return self.max_episode_stored if self.full else self.pos
 
     def size(self) -> int:
         """

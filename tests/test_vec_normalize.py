@@ -52,12 +52,7 @@ def allclose(obs_1, obs_2):
     Generalized np.allclose() to work with dict spaces.
     """
     if isinstance(obs_1, dict):
-        all_close = True
-        for key in obs_1.keys():
-            if not np.allclose(obs_1[key], obs_2[key]):
-                all_close = False
-                break
-        return all_close
+        return all(np.allclose(obs_1[key], obs_2[key]) for key in obs_1.keys())
     return np.allclose(obs_1, obs_2)
 
 

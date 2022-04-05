@@ -241,11 +241,10 @@ def test_evaluate_policy_monitors(vec_env_class):
             if with_monitor:
                 env = Monitor(env)
             env = wrapper_class(env)
+        elif with_monitor:
+            env = vec_env_class([lambda: wrapper_class(Monitor(gym.make(env_id)))] * n_envs)
         else:
-            if with_monitor:
-                env = vec_env_class([lambda: wrapper_class(Monitor(gym.make(env_id)))] * n_envs)
-            else:
-                env = vec_env_class([lambda: wrapper_class(gym.make(env_id))] * n_envs)
+            env = vec_env_class([lambda: wrapper_class(gym.make(env_id))] * n_envs)
         return env
 
     # Test that evaluation with VecEnvs works as expected
@@ -338,10 +337,6 @@ def test_zip_strict():
     # Iterables with different lengths
     list_a = [0, 1]
     list_b = [1, 2, 3]
-    # zip does not raise any error
-    for _, _ in zip(list_a, list_b):
-        pass
-
     # zip_strict does raise an error
     with pytest.raises(ValueError):
         for _, _ in zip_strict(list_a, list_b):

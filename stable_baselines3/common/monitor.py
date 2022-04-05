@@ -99,7 +99,7 @@ class Monitor(gym.Wrapper):
             self.episode_returns.append(ep_rew)
             self.episode_lengths.append(ep_len)
             self.episode_times.append(time.time() - self.t_start)
-            ep_info.update(self.current_reset_info)
+            ep_info |= self.current_reset_info
             if self.results_writer:
                 self.results_writer.write_row(ep_info)
             info["episode"] = ep_info
@@ -174,10 +174,12 @@ class ResultsWriter:
         if header is None:
             header = {}
         if not filename.endswith(Monitor.EXT):
-            if os.path.isdir(filename):
-                filename = os.path.join(filename, Monitor.EXT)
-            else:
-                filename = filename + "." + Monitor.EXT
+            filename = (
+                os.path.join(filename, Monitor.EXT)
+                if os.path.isdir(filename)
+                else f'{filename}.' + Monitor.EXT
+            )
+
         self.file_handler = open(filename, "wt")
         self.file_handler.write("#%s\n" % json.dumps(header))
         self.logger = csv.DictWriter(self.file_handler, fieldnames=("r", "l", "t") + extra_keys)

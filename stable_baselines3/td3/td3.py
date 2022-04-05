@@ -159,7 +159,11 @@ class TD3(OffPolicyAlgorithm):
             current_q_values = self.critic(replay_data.observations, replay_data.actions)
 
             # Compute critic loss
-            critic_loss = sum([F.mse_loss(current_q, target_q_values) for current_q in current_q_values])
+            critic_loss = sum(
+                F.mse_loss(current_q, target_q_values)
+                for current_q in current_q_values
+            )
+
             critic_losses.append(critic_loss.item())
 
             # Optimize the critics
@@ -182,7 +186,7 @@ class TD3(OffPolicyAlgorithm):
                 polyak_update(self.actor.parameters(), self.actor_target.parameters(), self.tau)
 
         self.logger.record("train/n_updates", self._n_updates, exclude="tensorboard")
-        if len(actor_losses) > 0:
+        if actor_losses:
             self.logger.record("train/actor_loss", np.mean(actor_losses))
         self.logger.record("train/critic_loss", np.mean(critic_losses))
 

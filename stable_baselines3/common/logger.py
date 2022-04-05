@@ -162,7 +162,7 @@ class HumanOutputFormat(KVWriter, SeqWriter):
             key2str[self._truncate(key)] = self._truncate(value_str)
 
         # Find max widths
-        if len(key2str) == 0:
+        if not key2str:
             warnings.warn("Tried to write empty key-value dict")
             return
         else:
@@ -239,12 +239,7 @@ class JSONOutputFormat(KVWriter):
             if isinstance(value, Image):
                 raise FormatUnsupportedError(["json"], "image")
             if hasattr(value, "dtype"):
-                if value.shape == () or len(value) == 1:
-                    # if value is a dimensionless numpy array or of length 1, serialize as a float
-                    return float(value)
-                else:
-                    # otherwise, a value is a numpy array, serialize as a list or nested lists
-                    return value.tolist()
+                return float(value) if value.shape == () or len(value) == 1 else value.tolist()
             return value
 
         key_values = {
@@ -278,8 +273,7 @@ class CSVOutputFormat(KVWriter):
     def write(self, key_values: Dict[str, Any], key_excluded: Dict[str, Union[str, Tuple[str, ...]]], step: int = 0) -> None:
         # Add our current row to the history
         key_values = filter_excluded_keys(key_values, key_excluded, "csv")
-        extra_keys = key_values.keys() - self.keys
-        if extra_keys:
+        if extra_keys := key_values.keys() - self.keys:
             self.keys.extend(extra_keys)
             self.file.seek(0)
             lines = self.file.readlines()
@@ -384,14 +378,14 @@ def make_output_format(_format: str, log_dir: str, log_suffix: str = "") -> KVWr
     :return: the logger
     """
     os.makedirs(log_dir, exist_ok=True)
-    if _format == "stdout":
-        return HumanOutputFormat(sys.stdout)
-    elif _format == "log":
-        return HumanOutputFormat(os.path.join(log_dir, f"log{log_suffix}.txt"))
+    if _format == "csv":
+        return CSVOutputFormat(os.path.join(log_dir, f"progress{log_suffix}.csv"))
     elif _format == "json":
         return JSONOutputFormat(os.path.join(log_dir, f"progress{log_suffix}.json"))
-    elif _format == "csv":
-        return CSVOutputFormat(os.path.join(log_dir, f"progress{log_suffix}.csv"))
+    elif _format == "log":
+        return HumanOutputFormat(os.path.join(log_dir, f"log{log_suffix}.txt"))
+    elif _format == "stdout":
+        return HumanOutputFormat(sys.stdout)
     elif _format == "tensorboard":
         return TensorBoardOutputFormat(log_dir)
     else:
@@ -581,7 +575,7 @@ def configure(folder: Optional[str] = None, format_strings: Optional[List[str]] 
 
     logger = Logger(folder=folder, output_formats=output_formats)
     # Only print when some files will be saved
-    if len(format_strings) > 0 and format_strings != ["stdout"]:
+    if format_strings and format_strings != ["stdout"]:
         logger.log(f"Logging to {folder}")
     return logger
 
@@ -600,8 +594,7 @@ def read_json(filename: str) -> pandas.DataFrame:
     """
     data = []
     with open(filename, "rt") as file_handler:
-        for line in file_handler:
-            data.append(json.loads(line))
+        data.extend(json.loads(line) for line in file_handler)
     return pandas.DataFrame(data)
 
 

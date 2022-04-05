@@ -62,7 +62,7 @@ def obs_space_info(obs_space: gym.spaces.Space) -> Tuple[List[str], Dict[Any, Tu
         assert isinstance(obs_space.spaces, OrderedDict), "Dict space must have ordered subspaces"
         subspaces = obs_space.spaces
     elif isinstance(obs_space, gym.spaces.Tuple):
-        subspaces = {i: space for i, space in enumerate(obs_space.spaces)}
+        subspaces = dict(enumerate(obs_space.spaces))
     else:
         assert not hasattr(obs_space, "spaces"), f"Unsupported structured space '{type(obs_space)}'"
         subspaces = {None: obs_space}

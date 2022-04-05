@@ -74,9 +74,7 @@ class Distribution(ABC):
         :param deterministic:
         :return:
         """
-        if deterministic:
-            return self.mode()
-        return self.sample()
+        return self.mode() if deterministic else self.sample()
 
     @abstractmethod
     def actions_from_params(self, *args, **kwargs) -> th.Tensor:
@@ -105,10 +103,7 @@ def sum_independent_dims(tensor: th.Tensor) -> th.Tensor:
     :param tensor: shape: (n_batch, n_actions) or (n_batch,)
     :return: shape: (n_batch,)
     """
-    if len(tensor.shape) > 1:
-        tensor = tensor.sum(dim=1)
-    else:
-        tensor = tensor.sum()
+    tensor = tensor.sum(dim=1) if len(tensor.shape) > 1 else tensor.sum()
     return tensor
 
 
@@ -267,8 +262,7 @@ class CategoricalDistribution(Distribution):
             of the policy network (before the action layer)
         :return:
         """
-        action_logits = nn.Linear(latent_dim, self.action_dim)
-        return action_logits
+        return nn.Linear(latent_dim, self.action_dim)
 
     def proba_distribution(self, action_logits: th.Tensor) -> "CategoricalDistribution":
         self.distribution = Categorical(logits=action_logits)
@@ -319,8 +313,7 @@ class MultiCategoricalDistribution(Distribution):
         :return:
         """
 
-        action_logits = nn.Linear(latent_dim, sum(self.action_dims))
-        return action_logits
+        return nn.Linear(latent_dim, sum(self.action_dims))
 
     def proba_distribution(self, action_logits: th.Tensor) -> "MultiCategoricalDistribution":
         self.distribution = [Categorical(logits=split) for split in th.split(action_logits, tuple(self.action_dims), dim=1)]
@@ -372,8 +365,7 @@ class BernoulliDistribution(Distribution):
             of the policy network (before the action layer)
         :return:
         """
-        action_logits = nn.Linear(latent_dim, self.action_dims)
-        return action_logits
+        return nn.Linear(latent_dim, self.action_dims)
 
     def proba_distribution(self, action_logits: th.Tensor) -> "BernoulliDistribution":
         self.distribution = Bernoulli(logits=action_logits)
@@ -446,10 +438,7 @@ class StateDependentNoiseDistribution(Distribution):
         self.full_std = full_std
         self.epsilon = epsilon
         self.learn_features = learn_features
-        if squash_output:
-            self.bijector = TanhBijector(epsilon)
-        else:
-            self.bijector = None
+        self.bijector = TanhBijector(epsilon) if squash_output else None
 
     def get_std(self, log_std: th.Tensor) -> th.Tensor:
         """
@@ -685,15 +674,10 @@ def kl_divergence(dist_true: Distribution, dist_pred: Distribution) -> th.Tensor
     # KL Divergence for different distribution types is out of scope
     assert dist_true.__class__ == dist_pred.__class__, "Error: input distributions should be the same type"
 
-    # MultiCategoricalDistribution is not a PyTorch Distribution subclass
-    # so we need to implement it ourselves!
-    if isinstance(dist_pred, MultiCategoricalDistribution):
-        assert dist_pred.action_dims == dist_true.action_dims, "Error: distributions must have the same input space"
-        return th.stack(
-            [th.distributions.kl_divergence(p, q) for p, q in zip(dist_true.distribution, dist_pred.distribution)],
-            dim=1,
-        ).sum(dim=1)
-
-    # Use the PyTorch kl_divergence implementation
-    else:
+    if not isinstance(dist_pred, MultiCategoricalDistribution):
         return th.distributions.kl_divergence(dist_true.distribution, dist_pred.distribution)
+    assert dist_pred.action_dims == dist_true.action_dims, "Error: distributions must have the same input space"
+    return th.stack(
+        [th.distributions.kl_divergence(p, q) for p, q in zip(dist_true.distribution, dist_pred.distribution)],
+        dim=1,
+    ).sum(dim=1)

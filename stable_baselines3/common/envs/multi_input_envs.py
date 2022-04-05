@@ -45,11 +45,7 @@ class SimpleMultiObsEnv(gym.Env):
         super(SimpleMultiObsEnv, self).__init__()
 
         self.vector_size = 5
-        if channel_last:
-            self.img_size = [64, 64, 1]
-        else:
-            self.img_size = [1, 64, 64]
-
+        self.img_size = [64, 64, 1] if channel_last else [1, 64, 64]
         self.random_start = random_start
         self.discrete_actions = discrete_actions
         if discrete_actions:
@@ -130,11 +126,7 @@ class SimpleMultiObsEnv(gym.Env):
         :param action:
         :return: tuple (observation, reward, done, info).
         """
-        if not self.discrete_actions:
-            action = np.argmax(action)
-        else:
-            action = int(action)
-
+        action = int(action) if self.discrete_actions else np.argmax(action)
         self.count += 1
 
         prev_state = self.state
@@ -173,8 +165,5 @@ class SimpleMultiObsEnv(gym.Env):
         :return: observation dict {'vec': ..., 'img': ...}
         """
         self.count = 0
-        if not self.random_start:
-            self.state = 0
-        else:
-            self.state = np.random.randint(0, self.max_state)
+        self.state = np.random.randint(0, self.max_state) if self.random_start else 0
         return self.state_mapping[self.state]

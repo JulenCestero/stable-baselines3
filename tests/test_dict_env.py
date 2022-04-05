@@ -259,7 +259,10 @@ def test_vec_normalize(model_class):
     Additional tests for PPO/A2C/SAC/DDPG/TD3/DQN to check observation space support
     for GoalEnv and VecNormalize using MultiInputPolicy.
     """
-    env = DummyVecEnv([lambda: BitFlippingEnv(n_bits=4, continuous=not (model_class == DQN))])
+    env = DummyVecEnv(
+        [lambda: BitFlippingEnv(n_bits=4, continuous=model_class != DQN)]
+    )
+
     env = VecNormalize(env)
 
     kwargs = {}

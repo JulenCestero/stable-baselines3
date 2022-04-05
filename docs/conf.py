@@ -56,7 +56,7 @@ copyright = "2020, Stable Baselines3"
 author = "Stable Baselines3 Contributors"
 
 # The short X.Y version
-version = "master (" + __version__ + " )"
+version = f"master ({__version__} )"
 # The full version, including alpha/beta/rc tags
 release = __version__
 
@@ -119,11 +119,7 @@ pygments_style = "sphinx"
 
 # Fix for read the docs
 on_rtd = os.environ.get("READTHEDOCS") == "True"
-if on_rtd:
-    html_theme = "default"
-else:
-    html_theme = "sphinx_rtd_theme"
-
+html_theme = "default" if on_rtd else "sphinx_rtd_theme"
 html_logo = "_static/img/logo.png"
 
 

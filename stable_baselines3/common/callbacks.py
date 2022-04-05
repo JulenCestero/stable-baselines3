@@ -143,9 +143,7 @@ class EventCallback(BaseCallback):
             self.callback.on_training_start(self.locals, self.globals)
 
     def _on_event(self) -> bool:
-        if self.callback is not None:
-            return self.callback.on_step()
-        return True
+        return self.callback.on_step() if self.callback is not None else True
 
     def _on_step(self) -> bool:
         return True
@@ -385,7 +383,7 @@ class EvalCallback(EventCallback):
 
                 kwargs = {}
                 # Save success log if present
-                if len(self._is_success_buffer) > 0:
+                if self._is_success_buffer:
                     self.evaluations_successes.append(self._is_success_buffer)
                     kwargs = dict(successes=self.evaluations_successes)
 
@@ -408,7 +406,7 @@ class EvalCallback(EventCallback):
             self.logger.record("eval/mean_reward", float(mean_reward))
             self.logger.record("eval/mean_ep_length", mean_ep_length)
 
-            if len(self._is_success_buffer) > 0:
+            if self._is_success_buffer:
                 success_rate = np.mean(self._is_success_buffer)
                 if self.verbose > 0:
                     print(f"Success rate: {100 * success_rate:.2f}%")
@@ -459,7 +457,7 @@ class StopTrainingOnRewardThreshold(BaseCallback):
     def _on_step(self) -> bool:
         assert self.parent is not None, "``StopTrainingOnMinimumReward`` callback must be used " "with an ``EvalCallback``"
         # Convert np.bool_ to bool, otherwise callback() is False won't work
-        continue_training = bool(self.parent.best_mean_reward < self.reward_threshold)
+        continue_training = self.parent.best_mean_reward < self.reward_threshold
         if self.verbose > 0 and not continue_training:
             print(
                 f"Stopping training because the mean reward {self.parent.best_mean_reward:.2f} "

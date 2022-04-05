@@ -115,7 +115,7 @@ class BitFlippingEnv(GoalEnv):
         if self.discrete_obs_space:
             # The internal state is the binary representation of the
             # observed one
-            return int(sum([state[i] * 2 ** i for i in range(len(state))]))
+            return int(sum(state[i] * 2 ** i for i in range(len(state))))
 
         if self.image_obs_space:
             size = np.prod(self.image_shape)

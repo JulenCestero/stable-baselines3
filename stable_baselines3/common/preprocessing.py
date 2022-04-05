@@ -40,26 +40,29 @@ def is_image_space(
         e.g., with frame-stacking, the observation space may have more channels than expected.
     :return:
     """
-    if isinstance(observation_space, spaces.Box) and len(observation_space.shape) == 3:
-        # Check the type
-        if observation_space.dtype != np.uint8:
-            return False
+    if (
+        not isinstance(observation_space, spaces.Box)
+        or len(observation_space.shape) != 3
+    ):
+        return False
+    # Check the type
+    if observation_space.dtype != np.uint8:
+        return False
 
-        # Check the value range
-        if np.any(observation_space.low != 0) or np.any(observation_space.high != 255):
-            return False
+    # Check the value range
+    if np.any(observation_space.low != 0) or np.any(observation_space.high != 255):
+        return False
 
-        # Skip channels check
-        if not check_channels:
-            return True
-        # Check the number of channels
-        if is_image_space_channels_first(observation_space):
-            n_channels = observation_space.shape[0]
-        else:
-            n_channels = observation_space.shape[-1]
-        # RGB, RGBD, GrayScale
-        return n_channels in [1, 3, 4]
-    return False
+    # Skip channels check
+    if not check_channels:
+        return True
+    # Check the number of channels
+    if is_image_space_channels_first(observation_space):
+        n_channels = observation_space.shape[0]
+    else:
+        n_channels = observation_space.shape[-1]
+    # RGB, RGBD, GrayScale
+    return n_channels in [1, 3, 4]
 
 
 def maybe_transpose(observation: np.ndarray, observation_space: spaces.Space) -> np.ndarray:
@@ -73,12 +76,15 @@ def maybe_transpose(observation: np.ndarray, observation_space: spaces.Space) ->
     # Avoid circular import
     from stable_baselines3.common.vec_env import VecTransposeImage
 
-    if is_image_space(observation_space):
-        if not (observation.shape == observation_space.shape or observation.shape[1:] == observation_space.shape):
-            # Try to re-order the channels
-            transpose_obs = VecTransposeImage.transpose_image(observation)
-            if transpose_obs.shape == observation_space.shape or transpose_obs.shape[1:] == observation_space.shape:
-                observation = transpose_obs
+    if (
+        is_image_space(observation_space)
+        and observation.shape != observation_space.shape
+        and observation.shape[1:] != observation_space.shape
+    ):
+        # Try to re-order the channels
+        transpose_obs = VecTransposeImage.transpose_image(observation)
+        if transpose_obs.shape == observation_space.shape or transpose_obs.shape[1:] == observation_space.shape:
+            observation = transpose_obs
     return observation
 
 
@@ -121,11 +127,13 @@ def preprocess_obs(
         return obs.float()
 
     elif isinstance(observation_space, spaces.Dict):
-        # Do not modify by reference the original observation
-        preprocessed_obs = {}
-        for key, _obs in obs.items():
-            preprocessed_obs[key] = preprocess_obs(_obs, observation_space[key], normalize_images=normalize_images)
-        return preprocessed_obs
+        return {
+            key: preprocess_obs(
+                _obs, observation_space[key], normalize_images=normalize_images
+            )
+            for key, _obs in obs.items()
+        }
+
 
     else:
         raise NotImplementedError(f"Preprocessing not implemented for {observation_space}")
@@ -147,7 +155,7 @@ def get_obs_shape(
         return (1,)
     elif isinstance(observation_space, spaces.MultiDiscrete):
         # Number of discrete features
-        return (int(len(observation_space.nvec)),)
+        return (len(observation_space.nvec), )
     elif isinstance(observation_space, spaces.MultiBinary):
         # Number of binary features
         return (int(observation_space.n),)
@@ -191,7 +199,7 @@ def get_action_dim(action_space: spaces.Space) -> int:
         return 1
     elif isinstance(action_space, spaces.MultiDiscrete):
         # Number of discrete actions
-        return int(len(action_space.nvec))
+        return len(action_space.nvec)
     elif isinstance(action_space, spaces.MultiBinary):
         # Number of binary actions
         return int(action_space.n)

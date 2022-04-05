@@ -117,14 +117,14 @@ def data_to_json(data: Dict[str, Any]) -> str:
                 for variable_name, variable_item in item_generator():
                     # Check if serializable. If not, just include the
                     # string-representation of the object.
-                    if is_json_serializable(variable_item):
-                        cloudpickle_serialization[variable_name] = variable_item
-                    else:
-                        cloudpickle_serialization[variable_name] = str(variable_item)
+                    cloudpickle_serialization[variable_name] = (
+                        variable_item
+                        if is_json_serializable(variable_item)
+                        else str(variable_item)
+                    )
 
             serializable_data[data_key] = cloudpickle_serialization
-    json_string = json.dumps(serializable_data, indent=4)
-    return json_string
+    return json.dumps(serializable_data, indent=4)
 
 
 def json_to_data(json_string: str, custom_objects: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -208,8 +208,13 @@ def open_path(path: Union[str, pathlib.Path, io.BufferedIOBase], mode: str, verb
         mode = {"write": "w", "read": "r", "w": "w", "r": "r"}[mode]
     except KeyError:
         raise ValueError("Expected mode to be either 'w' or 'r'.")
-    if ("w" == mode) and not path.writable() or ("r" == mode) and not path.readable():
-        e1 = "writable" if "w" == mode else "readable"
+    if (
+        mode == "w"
+        and not path.writable()
+        or mode == "r"
+        and not path.readable()
+    ):
+        e1 = "writable" if mode == "w" else "readable"
         raise ValueError(f"Expected a {e1} file.")
     return path
 
@@ -255,13 +260,12 @@ def open_path_pathlib(path: pathlib.Path, mode: str, verbose: int = 0, suffix: O
         try:
             path = path.open("rb")
         except FileNotFoundError as error:
-            if suffix is not None and suffix != "":
-                newpath = pathlib.Path(f"{path}.{suffix}")
-                if verbose == 2:
-                    warnings.warn(f"Path '{path}' not found. Attempting {newpath}.")
-                path, suffix = newpath, None
-            else:
+            if suffix is None or suffix == "":
                 raise error
+            newpath = pathlib.Path(f"{path}.{suffix}")
+            if verbose == 2:
+                warnings.warn(f"Path '{path}' not found. Attempting {newpath}.")
+            path, suffix = newpath, None
     else:
         try:
             if path.suffix == "" and suffix is not None and suffix != "":
@@ -318,7 +322,7 @@ def save_to_zip_file(
                 th.save(pytorch_variables, pytorch_variables_file)
         if params is not None:
             for file_name, dict_ in params.items():
-                with archive.open(file_name + ".pth", mode="w") as param_file:
+                with archive.open(f'{file_name}.pth', mode="w") as param_file:
                     th.save(dict_, param_file)
         # Save metadata: library version when file was saved
         archive.writestr("_stable_baselines3_version", stable_baselines3.__version__)
@@ -362,7 +366,7 @@ def load_from_zip_file(
     custom_objects: Optional[Dict[str, Any]] = None,
     device: Union[th.device, str] = "auto",
     verbose: int = 0,
-) -> (Tuple[Optional[Dict[str, Any]], Optional[TensorDict], Optional[TensorDict]]):
+) -> Tuple[Optional[Dict[str, Any]], Optional[TensorDict], Optional[TensorDict]]:
     """
     Load model data from a .zip archive
 
@@ -417,7 +421,7 @@ def load_from_zip_file(
                     # Remove ".pth" ending with splitext
                     th_object = th.load(file_content, map_location=device)
                     # "tensors.pth" was renamed "pytorch_variables.pth" in v0.9.0, see PR #138
-                    if file_path == "pytorch_variables.pth" or file_path == "tensors.pth":
+                    if file_path in ["pytorch_variables.pth", "tensors.pth"]:
                         # PyTorch variables (not state_dicts)
                         pytorch_variables = th_object
                     else:

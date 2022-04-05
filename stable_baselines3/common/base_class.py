@@ -152,9 +152,8 @@ class BaseAlgorithm(ABC):
 
         # Create and wrap the env if needed
         if env is not None:
-            if isinstance(env, str):
-                if create_eval_env:
-                    self.eval_env = maybe_make_env(env, self.verbose)
+            if isinstance(env, str) and create_eval_env:
+                self.eval_env = maybe_make_env(env, self.verbose)
 
             env = maybe_make_env(env, self.verbose)
             env = self._wrap_env(env, self.verbose, monitor_wrapper)
@@ -650,9 +649,8 @@ class BaseAlgorithm(ABC):
         data, params, pytorch_variables = load_from_zip_file(path, device=device, custom_objects=custom_objects)
 
         # Remove stored device information and replace with ours
-        if "policy_kwargs" in data:
-            if "device" in data["policy_kwargs"]:
-                del data["policy_kwargs"]["device"]
+        if "policy_kwargs" in data and "device" in data["policy_kwargs"]:
+            del data["policy_kwargs"]["device"]
 
         if "policy_kwargs" in kwargs and kwargs["policy_kwargs"] != data["policy_kwargs"]:
             raise ValueError(
@@ -668,10 +666,8 @@ class BaseAlgorithm(ABC):
             env = cls._wrap_env(env, data["verbose"])
             # Check if given env is valid
             check_for_correct_spaces(env, data["observation_space"], data["action_space"])
-        else:
-            # Use stored env, if one exists. If not, continue as is (can be used for predict)
-            if "env" in data:
-                env = data["env"]
+        elif "env" in data:
+            env = data["env"]
 
         # noinspection PyArgumentList
         model = cls(  # pytype: disable=not-instantiable,wrong-keyword-args
@@ -701,7 +697,7 @@ class BaseAlgorithm(ABC):
                     continue
                 # Set the data attribute directly to avoid issue when using optimizers
                 # See https://github.com/DLR-RM/stable-baselines3/issues/391
-                recursive_setattr(model, name + ".data", pytorch_variables[name].data)
+                recursive_setattr(model, f'{name}.data', pytorch_variables[name].data)
 
         # Sample gSDE exploration matrix, so it uses the right device
         # see issue #44

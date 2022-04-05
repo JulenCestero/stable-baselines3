@@ -42,7 +42,7 @@ class VecVideoRecorder(VecEnvWrapper):
         while isinstance(temp_env, VecEnvWrapper):
             temp_env = temp_env.venv
 
-        if isinstance(temp_env, DummyVecEnv) or isinstance(temp_env, SubprocVecEnv):
+        if isinstance(temp_env, (DummyVecEnv, SubprocVecEnv)):
             metadata = temp_env.get_attr("metadata")[0]
         else:
             metadata = temp_env.metadata

@@ -116,7 +116,7 @@ def create_mlp(
     :return:
     """
 
-    if len(net_arch) > 0:
+    if net_arch:
         modules = [nn.Linear(input_dim, net_arch[0]), activation_fn()]
     else:
         modules = []
@@ -126,7 +126,7 @@ def create_mlp(
         modules.append(activation_fn())
 
     if output_dim > 0:
-        last_layer_dim = net_arch[-1] if len(net_arch) > 0 else input_dim
+        last_layer_dim = net_arch[-1] if net_arch else input_dim
         modules.append(nn.Linear(last_layer_dim, output_dim))
     if squash_output:
         modules.append(nn.Tanh())
@@ -177,9 +177,7 @@ class MlpExtractor(nn.Module):
         # Iterate through the shared layers and build the shared parts of the network
         for layer in net_arch:
             if isinstance(layer, int):  # Check that this is a shared layer
-                # TODO: give layer a meaningful name
-                shared_net.append(nn.Linear(last_layer_dim_shared, layer))  # add linear of size layer
-                shared_net.append(activation_fn())
+                shared_net.extend((nn.Linear(last_layer_dim_shared, layer), activation_fn()))
                 last_layer_dim_shared = layer
             else:
                 assert isinstance(layer, dict), "Error: the net_arch list can only contain ints and dicts"
@@ -199,14 +197,18 @@ class MlpExtractor(nn.Module):
         for pi_layer_size, vf_layer_size in zip_longest(policy_only_layers, value_only_layers):
             if pi_layer_size is not None:
                 assert isinstance(pi_layer_size, int), "Error: net_arch[-1]['pi'] must only contain integers."
-                policy_net.append(nn.Linear(last_layer_dim_pi, pi_layer_size))
-                policy_net.append(activation_fn())
+                policy_net.extend(
+                    (nn.Linear(last_layer_dim_pi, pi_layer_size), activation_fn())
+                )
+
                 last_layer_dim_pi = pi_layer_size
 
             if vf_layer_size is not None:
                 assert isinstance(vf_layer_size, int), "Error: net_arch[-1]['vf'] must only contain integers."
-                value_net.append(nn.Linear(last_layer_dim_vf, vf_layer_size))
-                value_net.append(activation_fn())
+                value_net.extend(
+                    (nn.Linear(last_layer_dim_vf, vf_layer_size), activation_fn())
+                )
+
                 last_layer_dim_vf = vf_layer_size
 
         # Save dim, used to create the distributions
@@ -262,10 +264,12 @@ class CombinedExtractor(BaseFeaturesExtractor):
         self._features_dim = total_concat_size
 
     def forward(self, observations: TensorDict) -> th.Tensor:
-        encoded_tensor_list = []
+        encoded_tensor_list = [
+            extractor(observations[key])
+            for key, extractor in self.extractors.items()
+        ]
 
-        for key, extractor in self.extractors.items():
-            encoded_tensor_list.append(extractor(observations[key]))
+
         return th.cat(encoded_tensor_list, dim=1)
 
 

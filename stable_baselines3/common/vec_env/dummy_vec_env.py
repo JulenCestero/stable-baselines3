@@ -51,10 +51,7 @@ class DummyVecEnv(VecEnv):
         return (self._obs_from_buf(), np.copy(self.buf_rews), np.copy(self.buf_dones), deepcopy(self.buf_infos))
 
     def seed(self, seed: Optional[int] = None) -> List[Union[None, int]]:
-        seeds = list()
-        for idx, env in enumerate(self.envs):
-            seeds.append(env.seed(seed + idx))
-        return seeds
+        return [env.seed(seed + idx) for idx, env in enumerate(self.envs)]
 
     def reset(self) -> VecEnvObs:
         for env_idx in range(self.num_envs):
@@ -88,10 +85,7 @@ class DummyVecEnv(VecEnv):
 
     def _save_obs(self, env_idx: int, obs: VecEnvObs) -> None:
         for key in self.keys:
-            if key is None:
-                self.buf_obs[key][env_idx] = obs
-            else:
-                self.buf_obs[key][env_idx] = obs[key]
+            self.buf_obs[key][env_idx] = obs if key is None else obs[key]
 
     def _obs_from_buf(self) -> VecEnvObs:
         return dict_to_obs(self.observation_space, copy_obs_dict(self.buf_obs))
